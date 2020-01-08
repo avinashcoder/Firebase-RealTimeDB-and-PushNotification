@@ -3,23 +3,30 @@ package com.avinash.firebase;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Build;
-import android.support.v4.app.NotificationCompat;
+import androidx.core.app.NotificationCompat;
+
 import android.text.Html;
 import android.util.Log;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.target.SimpleTarget;
+import com.bumptech.glide.request.target.Target;
+import com.bumptech.glide.request.transition.Transition;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
 import java.util.Map;
+import java.util.Objects;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
+
+    String title,notificationBody;
+
     @Override
     public void onNewToken(String token) {
         Log.d("TOKEN", token);
@@ -31,15 +38,71 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     public void onMessageReceived(RemoteMessage remoteMessage) {
         super.onMessageReceived(remoteMessage);
 
-        if (remoteMessage.getData().size() > 0) {
-            createNotification(remoteMessage.getData());
-        }
+        createNotification(remoteMessage);
+
     }
 
-    public void createNotification(Map<String, String> notificationData) {
-//        NotificationCompat.BigPictureStyle style = new NotificationCompat.BigPictureStyle();
-        Bitmap icon = BitmapFactory.decodeResource(getApplicationContext().getResources(), R.mipmap.ic_launcher);
-//        style.bigPicture(icon);
+    public void createNotification(final RemoteMessage remoteMessage) {
+        Map<String, String> notificationExtraData  = remoteMessage.getData();
+
+        title = Objects.requireNonNull( remoteMessage.getNotification() ).getTitle();
+        notificationBody = remoteMessage.getNotification().getBody();
+        String imageUrl = remoteMessage.getNotification().getImageUrl().toString();
+        final Bitmap resource = BitmapFactory.decodeResource(getApplicationContext().getResources(), R.mipmap.ic_launcher);
+
+        if(notificationExtraData.containsKey( "title" )){
+            title = notificationExtraData.get("title");
+        }
+        if(notificationExtraData.containsKey( "message" )){
+            notificationBody = notificationExtraData.get( "message" );
+        }
+        if(notificationExtraData.containsKey( "image" )){
+            imageUrl = notificationExtraData.get( "image" );
+        }
+
+        if(!(imageUrl==null || imageUrl.isEmpty())){
+            Glide.with(getApplicationContext())
+                    .asBitmap()
+                    .load(imageUrl)
+                    .into(new SimpleTarget<Bitmap>() {
+                        @Override
+                        public void onResourceReady(Bitmap imgRes, Transition<? super Bitmap> transition) {
+                            createNotificationWithImage(remoteMessage,imgRes);
+                        }
+                    });
+        }else{
+            NotificationManager notificationManager = (NotificationManager) getSystemService( Context.NOTIFICATION_SERVICE);
+            String NOTIFICATION_CHANNEL_ID = "DemoId";
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel notificationChannel = new NotificationChannel(NOTIFICATION_CHANNEL_ID, "Notification", NotificationManager.IMPORTANCE_DEFAULT);
+
+                //Configure Notification Channel
+                notificationChannel.setDescription("My Notification");
+                notificationChannel.enableLights(true);
+
+
+                notificationManager.createNotificationChannel(notificationChannel);
+            }
+            Context context = this;
+            NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_launcher_background)
+                    .setContentTitle( title)
+                    .setAutoCancel(true)
+                    .setContentText(notificationBody)
+                    .setLargeIcon(resource)
+                    .setStyle(new NotificationCompat.BigTextStyle().bigText( Html.fromHtml(notificationBody)))
+                    .setShowWhen(true)
+                    .setWhen(System.currentTimeMillis())
+                    .setPriority( Notification.PRIORITY_MAX);
+
+
+            notificationManager.notify(1, notificationBuilder.build());
+        }
+
+    }
+
+    private void createNotificationWithImage(RemoteMessage remoteMessage, Bitmap resource) {
 
         NotificationManager notificationManager = (NotificationManager) getSystemService( Context.NOTIFICATION_SERVICE);
         String NOTIFICATION_CHANNEL_ID = "DemoId";
@@ -57,12 +120,14 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         Context context = this;
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_background)
-                .setContentTitle( notificationData.get("title"))
+                .setContentTitle( title)
                 .setAutoCancel(true)
-                .setContentText(Html.fromHtml(notificationData.get("message")))
-//                .setStyle(style)
-                .setLargeIcon(BitmapFactory.decodeResource(context.getResources(),
-                        R.mipmap.ic_launcher))
+                .setContentText(notificationBody)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(Html.fromHtml(notificationBody)))
+                .setStyle(new NotificationCompat.BigPictureStyle()
+                        .bigPicture(resource)
+                        .bigLargeIcon(resource))
+                .setLargeIcon(resource)
                 .setShowWhen(true)
                 .setWhen(System.currentTimeMillis())
                 .setPriority( Notification.PRIORITY_MAX);
