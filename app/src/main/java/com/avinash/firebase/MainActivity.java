@@ -19,18 +19,22 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         FirebaseDatabase database = FirebaseDatabase.getInstance();
-        DatabaseReference myRef = database.getReference("User List").child("user3");
+        DatabaseReference myRef = database.getReference("User List");
 
-//        myRef.child("user3").child("Name").setValue("Ashik");
-//        myRef.child("user3").child("Contact").setValue("9931778331");
-//        myRef.child("user3").child("Address").setValue("Chennai");
+//        myRef.child("user4").child("Name").setValue("Animesh");
+//        myRef.child("user4").child("Contact").setValue("9876543210");
+//        myRef.child("user4").child("Address").setValue("Bhabua");
 
         myRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                String value = dataSnapshot.child("Name").toString();
+                String value = dataSnapshot.child( "user1" ).child("Name").toString();
                 Log.d("Tag", "Value is: " + value);
                 Toast.makeText(getApplicationContext(),value,Toast.LENGTH_SHORT).show();
+
+                // Use this class to convert data into list
+                //GenericTypeIndicator<List<ModelClass>> genericTypeIndicator =new GenericTypeIndicator<List<ModelClass>>(){};
+                //List<TaskDes> taskDesList=dataSnapshot.getValue(genericTypeIndicator);
 
             }
 

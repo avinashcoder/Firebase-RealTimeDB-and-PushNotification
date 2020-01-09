@@ -7,13 +7,17 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
+
+import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 import android.text.Html;
 import android.util.Log;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.target.CustomTarget;
 import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.target.Target;
 import com.bumptech.glide.request.transition.Transition;
@@ -25,7 +29,7 @@ import java.util.Objects;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
-    String title,notificationBody;
+    String title,notificationBody,imageUrl;
 
     @Override
     public void onNewToken(String token) {
@@ -47,7 +51,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         title = Objects.requireNonNull( remoteMessage.getNotification() ).getTitle();
         notificationBody = remoteMessage.getNotification().getBody();
-        String imageUrl = remoteMessage.getNotification().getImageUrl().toString();
+        if(!(remoteMessage.getNotification().getImageUrl()==null || remoteMessage.getNotification().getImageUrl().toString().isEmpty())){
+            imageUrl = remoteMessage.getNotification().getImageUrl().toString();
+        }
         final Bitmap resource = BitmapFactory.decodeResource(getApplicationContext().getResources(), R.mipmap.ic_launcher);
 
         if(notificationExtraData.containsKey( "title" )){
@@ -64,10 +70,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             Glide.with(getApplicationContext())
                     .asBitmap()
                     .load(imageUrl)
-                    .into(new SimpleTarget<Bitmap>() {
+                    .into(new CustomTarget<Bitmap>() {
                         @Override
                         public void onResourceReady(Bitmap imgRes, Transition<? super Bitmap> transition) {
                             createNotificationWithImage(remoteMessage,imgRes);
+                        }
+
+                        @Override
+                        public void onLoadCleared(@Nullable Drawable placeholder) {
+
                         }
                     });
         }else{
